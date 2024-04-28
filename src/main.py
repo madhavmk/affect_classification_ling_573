@@ -4,10 +4,10 @@ import re
 import pandas as pd
 
 
-from data_processor import DataProcessor
-from feature_engineering import FeatureEngineering
-from classification_model import ClassificationModel
-from evaluation import Evaluator
+from .data_processor import DataProcessor
+from .feature_engineering import FeatureEngineering
+from .classification_model import ClassificationModel
+from .evaluation import Evaluator
 
 
 
