@@ -2,12 +2,13 @@ import json
 import os
 import re
 import pandas as pd
+import numpy as np
 
 
-from .data_processor import DataProcessor
-from .feature_engineering import FeatureEngineering
-from .classification_model import ClassificationModel
-from .evaluation import Evaluator
+from data_processor import DataProcessor
+from feature_engineering import FeatureEngineering
+from classification_model import ClassificationModel
+from evaluation import Evaluator
 
 
 
@@ -107,6 +108,15 @@ def main(config):
                                 embedding_file_path= config['model']['feature_engineering']['embedding_path'],
                                 embedding_dim=25)
     
+    # save the dataframe so it can be used in neural stuff
+    #train_df.to_json('data/train_df.ndjson', orient='records')
+    df = train_df[['cleaned_text', 'HS']]
+
+    with open('data/train_df.ndjson', 'w') as file:
+        for index, row in df.iterrows():
+            json.dump(row.to_dict(), file)
+            file.write('\n')
+
     # Transform
     val_df = myFE.transform(myDP.processed_data['validation'])
 
