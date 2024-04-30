@@ -6,6 +6,7 @@ model can use to classify the tweets within the dataset.
 import torch
 import numpy as np
 import pandas as pd
+import csv
 import scipy.stats as st
 import tensorflow_hub as hub
 
@@ -19,6 +20,8 @@ from typing import List, Union, Optional, Dict
 #import tensorflow as tf
 #import tensorflow_hub as hub
 
+# Specify the file path to the slang dictionary 
+slang_dict_file_path = 'data/SlangSD.txt'
 
 # Define helper function to aggregate embeddings
 def get_embedding_ave(embedding_list: List[np.array], embedding_dim: int) -> np.array:
@@ -71,6 +74,75 @@ class FeatureEngineering:
         # Save embedding info
         self.embedding_file_path = None
         self.embedding_dim = None
+        
+    def get_slang_score(self, data: pd.DataFrame, slang_dict_file_path: str) -> pd.DataFrame:
+        """This method uses data from the SlangSD resource, which labels slang words with their  
+        sentiment strength. The sentiment strength scale is from -2 to 2, where -2 is
+        strongly negative, -1 is negative, 0 is neutral, 1 is positive, and 2 is strongly positive.
+        This method sums the sentiment scores across all the slang words in a tweet. The resulting
+        accumulated sentiment scores are added to the original dataframes as sentiment features.
+
+
+        Arguments:
+        ---------
+        data
+            The dataframe for which the slang word sentiment score feature is to be generated
+        slang_dict_file_path
+            File path for the slang dictionary file.
+
+        Returns:
+        -------
+        The original datasframe with one new column that contain the accumulated sentiment scores of slang words 
+        for each tweet in the dataset.
+
+        """
+        
+        # read in the slang dictionary file and construct a slang_dict
+        sd_path = slang_dict_file_path
+        
+        with open (sd_path, 'r') as slang_dict_file:
+            reader = csv.reader(slang_dict_file, delimiter='\t')
+            slang_dict = {}
+            for row in reader:
+                slang_dict[row[0]] = row[1]
+        
+        # helper code that lists the occuring slang words in a single tweet for every tweets in the dataset
+        slang_list = []  
+        # stores the accumulated sentiment score for a tweet, and stored
+        # as a new column to the original dataframe
+        slang_score_list = []     
+                
+        # iterate over every tweet to get the counts and score of slang words
+        for index, row in data.iterrows(): 
+            text = row['cleaned_text']
+            # helper code that generates a list containing all occuring slang
+            # words in a single tweet
+            occurence = [] 
+            # Calculate the accumulated sentiment score of a tweet
+            slang_score = 0
+            
+            # iterate over the slang dict to find matching slangs in a tweet
+            for slang_key in list(slang_dict.keys()): 
+                my_regex = r"\b" + re.escape(slang_key) + r"\b"
+                match_slang = re.findall(my_regex, text)
+                if match_slang:
+                    num_of_occur = len(re.findall(my_regex, text))
+                    # add the sentiment score of matched slang word to slang_score
+                    slang_score += num_of_occur * int(slang_dict[slang_key])
+                    occurence.append(match_slang)
+                
+            slang_list.append(occurence)
+            # add the slang sentiment score to slang_score_list for a tweet
+            slang_score_list.append(slang_score)
+
+        # add a new column to the original dataframe, representing the slang word sentiment score
+        # for a tweet
+        for index, row in data.iterrows():
+            data.loc[:, "slangscore"] = slang_score_list
+            # helper code to ensure all the slang words of a tweet have been successfully retrieved
+            #data.loc[:, "slanglist"] = slang_list
+
+        return data
 
     def _NRC_counts(self, data: pd.DataFrame) -> pd.DataFrame:
 
@@ -396,11 +468,12 @@ class FeatureEngineering:
                                                   feature_columns=['!_count', '?_count', '$_count', '*_count'],
                                                   normalization_method='z_score')
 
+        # Get slang words sentiment scores feature
+        transformed_data = self.get_slang_score(transformed_data, slang_dict_file_path)
 
         # Get NRC (emotion and sentiment word) counts feature
         transformed_data = self._NRC_counts(transformed_data)
-
-
+        
         # Get Universal Sentence embeddings
         self.get_universal_sent_embeddings(transformed_data)
 
@@ -446,6 +519,9 @@ class FeatureEngineering:
         transformed_data = self.normalize_feature(data=data,
                                                   feature_columns=['!_count', '?_count', '$_count', '*_count'])
 
+        # Get slang words sentiment scores feature
+        transformed_data = self.get_slang_score(transformed_data, slang_dict_file_path)
+        
         # Get NRC values
         transformed_data = self._NRC_counts(transformed_data)
 
