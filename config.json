@@ -13,7 +13,8 @@
         "feature_engineering": {
             "embedding_path": "data/glove.twitter.27B.25d.txt" ,
             "embedding_dim": 25,
-            "slang_dict_path": "data/SlangSD.txt"
+            "slang_dict_path": "data/SlangSD.txt",
+            "stop_words_path": "data/stopwords.txt"
         },
         "classification": {
             "approach": "random_forest" ,
