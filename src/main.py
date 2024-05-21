@@ -99,7 +99,8 @@ def main(config):
         train_df = myFE.fit_transform(myDP.processed_data['train'],
                                     embedding_file_path=config['model']['feature_engineering']['embedding_path'],
                                     embedding_dim=config['model']['feature_engineering']['embedding_dim'],
-                                    slang_dict_path=config['model']['feature_engineering']['slang_dict_path'])
+                                    slang_dict_path=config['model']['feature_engineering']['slang_dict_path'],
+                                    stop_words_path=config['model']['feature_engineering']['stop_words_path'])
 
         # Transform
         val_df = myFE.transform(myDP.processed_data['validation'])

@@ -79,18 +79,20 @@ class FeatureEngineering:
         self.nrc = None
 
 
-    def get_slang_score(self, data: pd.DataFrame, slang_dict_path: str) -> pd.DataFrame:
+    def get_slang_score(self, data: pd.DataFrame, slang_dict_path: str, stop_words_path:str) -> pd.DataFrame:
         """This method uses data from the SlangSD resource, which labels slang words with their
         sentiment strength. The sentiment strength scale is from -2 to 2, where -2 is
         strongly negative, -1 is negative, 0 is neutral, 1 is positive, and 2 is strongly positive.
-        This method sums the sentiment scores across all the slang words in a tweet. The resulting
-        accumulated sentiment scores are added to the original dataframes as sentiment features.
+        This method sums the sentiment scores across all the slang words (stop words not included) in a tweet. 
+        The resulting accumulated sentiment scores are added to the original dataframes as sentiment features.
         Arguments:
         ---------
         data
             The dataframe for which the slang word sentiment score feature is to be generated
         slang_dict_path
             File path for the slang dictionary file.
+        stop_words_path
+            File path for the stop words list.
         Returns:
         -------
         The original datasframe with one new column that contain the accumulated sentiment scores of slang words
@@ -105,6 +107,10 @@ class FeatureEngineering:
             slang_dict = {}
             for row in reader:
                 slang_dict[row[0]] = row[1]
+                
+        # construct a stop word list to remove stop words that are irrelevant to sentiment scores
+        sw_path = stop_words_path
+        stop_words_lists = open(sw_path,'r').read().split('\n') 
 
         # helper code that lists the occuring slang words in a single tweet for every tweets in the dataset
         slang_list = []
@@ -126,10 +132,12 @@ class FeatureEngineering:
                 my_regex = r"\b" + re.escape(slang_key) + r"\b"
                 match_slang = re.findall(my_regex, text)
                 if match_slang:
-                    num_of_occur = len(re.findall(my_regex, text))
-                    # add the sentiment score of matched slang word to slang_score
-                    slang_score += num_of_occur * int(slang_dict[slang_key])
-                    occurence.append(match_slang)
+                    # only count sentiment scores for slangs that are not in the stop words list 
+                    if match_slang[0] not in stop_words_lists:
+                        num_of_occur = len(re.findall(my_regex, text))
+                        # add the sentiment score of matched slang word to slang_score
+                        slang_score += num_of_occur * int(slang_dict[slang_key])
+                        occurence.append(match_slang)
 
             slang_list.append(occurence)
             # add the slang sentiment score to slang_score_list for a tweet
@@ -491,7 +499,7 @@ class FeatureEngineering:
         return data
 
     def fit_transform(self, train_data: pd.DataFrame, embedding_file_path: str, embedding_dim: int,
-                      nrc_embedding_file: str, slang_dict_path: str) -> pd.DataFrame:
+                      nrc_embedding_file: str, slang_dict_path: str, stop_words_path: str) -> pd.DataFrame:
         """Learns all necessary information from the provided training data in order to generate the complete set of
         features to be fed into the classification model. In the fitting process, the training data is also transformed
         into the feature-set expected by the model and returned.
@@ -506,6 +514,8 @@ class FeatureEngineering:
             The dimension of the embeddings.
         slang_dict_path
             File path for the Slang dictionary file.
+        stop_words_path
+            File path for the stop words list file.
 
         Returns:
         -------
@@ -520,6 +530,9 @@ class FeatureEngineering:
 
         # Save the slang dictionary path for use in the model
         self.slang_dict_path = slang_dict_path
+        
+        # Save the stop words list path for use in the model
+        self.stop_words_path = stop_words_path
 
         # Normalize count features from data cleaning process
         transformed_data = self.normalize_feature(data=self.train_data,
@@ -528,7 +541,7 @@ class FeatureEngineering:
 
 
         # Get slang words sentiment scores feature
-        transformed_data = self.get_slang_score(transformed_data, self.slang_dict_path)
+        transformed_data = self.get_slang_score(transformed_data, self.slang_dict_path, self.stop_words_path)
 
         # Get NRC (emotion and sentiment word) counts feature
         transformed_data = self._NRC_counts(transformed_data)
@@ -582,7 +595,7 @@ class FeatureEngineering:
                                                   feature_columns=['!_count', '?_count', '$_count', '*_count'])
 
         # Get slang words sentiment scores feature
-        transformed_data = self.get_slang_score(transformed_data, self.slang_dict_path)
+        transformed_data = self.get_slang_score(transformed_data, self.slang_dict_path, self.stop_words_path)
 
         # Get NRC values
         transformed_data = self._NRC_counts(transformed_data)
@@ -619,7 +632,7 @@ if __name__ == '__main__':
     # Fit
     train_df = myFE.fit_transform(myDP.processed_data['train'], embedding_file_path='data/glove.twitter.27B.25d.txt',
                                 embedding_dim=25, nrc_embedding_file='data/glove.twitter.27B.25d.txt',
-                                slang_dict_path='data/SlangSD.txt')
+                                slang_dict_path='data/SlangSD.txt', stop_words_path='data/stopwords.txt')
     # Note that the embedding file is too large to add to the repository, so you will need to specify the path on your
     # local machine to run this portion of the system.
 
