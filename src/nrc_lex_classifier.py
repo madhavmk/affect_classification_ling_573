@@ -9,6 +9,7 @@ from nrclex import NRCLex
 from sklearn.linear_model import LogisticRegression
 from sklearn.multioutput import MultiOutputClassifier
 from nltk.tokenize import word_tokenize
+from transformers import AutoTokenizer, AutoModel
 from typing import List
 
 # Define class to generate NRC-lex scores
@@ -18,6 +19,79 @@ class ExtendedNRCLex():
         self.glove_model = None
         self.embedding_classifier = None
         self.classes = []
+
+    def fit_spanish(self, dict: dict):
+        """ 
+        Trains a logistic regression classifier to predict emotion and valence scores using Spanish BERT embeddings of
+        words in the NRC lexicon
+
+        Arguments:
+        ----------
+        dict
+            A dictionary containing the Spanish NRCLex data, with phrases as keys and the emotion list as values
+        """
+        # Load the tokenizer and model
+        model_name = 'dccuchile/bert-base-spanish-wwm-uncased'
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModel.from_pretrained(model_name)
+
+        # Access the embedding layer weights
+        embedding_layer = model.embeddings.word_embeddings
+        embedding_weights = embedding_layer.weight.detach().numpy()
+
+        # Build the embeddings index
+        embeddings_index = {}
+        vocab = tokenizer.get_vocab()
+
+        for word, idx in vocab.items():
+            embeddings_index[word] = embedding_weights[idx]
+
+        # save the BERT model
+        self.model = embeddings_index
+
+        # Generate training data: list of NRCLex words with emotion and valence values
+
+        lex_words = dict.keys()
+        x_vec = []
+        y_vec = {'fear': [], 'anger': [], 'anticipation': [], 'trust': [], 'surprise': [], 'positive': [], 'negative': [],
+                 'sadness': [], 'disgust': [], 'joy': []}
+        for word in lex_words:
+            # check to see if 'word' is actually several words
+            wordlist = word.split()
+
+            # run through each word from the phrase, assigning the phrase weight to it
+            if len(wordlist) > 1:
+                for w in wordlist:
+                    if w in embeddings_index.keys():
+                        x_vec.append(embeddings_index[w])
+                        emo_list = dict[word]
+                        for emo in y_vec.keys():
+                            if emo in emo_list:
+                                y_vec[emo].append(1)
+                            else:
+                                y_vec[emo].append(0)
+            else:
+                if word in embeddings_index.keys():
+                    x_vec.append(embeddings_index[word])
+                    emo_list = dict[word]
+                    for emo in y_vec.keys():
+                        if emo in emo_list:
+                            y_vec[emo].append(1)
+                        else:
+                            y_vec[emo].append(0)
+        y_vec = pd.DataFrame(y_vec)
+        self.classes = y_vec.columns
+        x_vec = pd.DataFrame(x_vec)
+
+        # Initialize and train classifier
+        logReg = MultiOutputClassifier(LogisticRegression(penalty='l2', random_state=42, solver='sag',
+                                                          multi_class='multinomial', max_iter=1000)
+                                       )
+        logReg.fit(x_vec, y_vec)
+
+        # Save trained classifier
+        self.embedding_classifier = logReg
+
 
     # Method to train the logistic regression
     def fit(self, embedding_file_path: str = 'data/glove.twitter.27B.25d.txt') -> None:
@@ -40,7 +114,7 @@ class ExtendedNRCLex():
                 embeddings_index[word] = coefs
 
         # Save the glove model
-        self.glove_model = embeddings_index
+        self.model = embeddings_index
 
         # Generate training data: list of NRCLex words with emotion and valence values
         lex0 = NRCLex('init')
@@ -109,8 +183,8 @@ class ExtendedNRCLex():
         text_vec = word_tokenize(text)
         res = np.array([0]*10)
         for word in text_vec:
-            if word in self.glove_model.keys():
-                emb = self.glove_model[word]
+            if word in self.model.keys():
+                emb = self.model[word]
                 emb = pd.DataFrame(emb).T
                 if res_type == 'binary':
                     nrc_vals = self.embedding_classifier.predict(emb)

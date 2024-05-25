@@ -2,8 +2,8 @@
   "document_processing": {
         "input_tsv_files": {
             "filepath": "data",
-            "training": "data/train_en.tsv" ,
-            "devtest": "data/dev_en.tsv" ,
+            "training": "data/train_es.tsv" ,
+            "devtest": "data/dev_es.tsv" ,
             "language": "spanish"
         },
         "save_or_load": "save",
@@ -15,7 +15,7 @@
             "embedding_dim": 25,
             "slang_dict_path": "data/SlangSD.txt",
             "span_NRC_path": "data/lexico_nrc.csv",
-            "load_translations": "load",
+            "load_translations": "save",
             "trans_path": "data/translations.csv",
             "stop_words_path": "data/stopwords.txt",
             "es_sent_path": "data/es_sent.txt",

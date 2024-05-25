@@ -12,7 +12,7 @@ import tensorflow_hub as hub
 import csv
 import re
 
-from src.nrc_lex_classifier import ExtendedNRCLex
+from nrc_lex_classifier import ExtendedNRCLex
 
 from nrclex import NRCLex
 # from googletrans import Translator
@@ -88,6 +88,8 @@ class FeatureEngineering:
         # Save extended-NRC info
         self.nrc_embeddings = None
         self.nrc = None
+        self.senti_dict = None
+        self.word_dict = None
 
 
     def get_slang_score(self, data: pd.DataFrame, slang_dict_path: str, stop_words_path: str) -> pd.DataFrame:
@@ -378,9 +380,14 @@ class FeatureEngineering:
 
         # Initialize and train the NRC classifier
         if not self.fitted:
-            NewNRCLex = ExtendedNRCLex()
-            NewNRCLex.fit(embedding_file)
-            self.nrc = NewNRCLex
+            if self.language == "english":
+                NewNRCLex = ExtendedNRCLex()
+                NewNRCLex.fit(embedding_file)
+                self.nrc = NewNRCLex
+            elif self.language == "spanish":
+                NewNRCLex = ExtendedNRCLex()
+                NewNRCLex.fit_spanish(self.senti_dict)
+                self.nrc = NewNRCLex
         else:
             NewNRCLex = self.nrc
         emo_classes = NewNRCLex.classes
@@ -865,19 +872,22 @@ class FeatureEngineering:
             transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=nrc_embedding_file)
 
         elif language == 'spanish':
+
+            # uses Spanish translated NRCLex to get counts
+            transformed_data = self._Span_NRC_counts(lexpath, transformed_data)
+            transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=nrc_embedding_file)
             
             if load_translations == 'load':
                 transformed_data = self._load_translations(trans_path, transformed_data)
                 transformed_data = self._NRC_counts(transformed_data)
+
             else:
                 # translates the cleaned text to English, runs normal NRCLex
                 transformed_data = self._translator(transformed_data)
                 transformed_data.to_csv('data/translations.csv')
                 transformed_data = self._NRC_counts(transformed_data)
+            
                 
-            # uses Spanish translated NRCLex to get counts
-            transformed_data = self._Span_NRC_counts(lexpath, transformed_data)
-
         # Get Universal Sentence embeddings
         self.get_universal_sent_embeddings(transformed_data, language)
 
@@ -934,14 +944,14 @@ class FeatureEngineering:
             transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=self.nrc_embeddings)
         elif self.language == 'spanish':
 
+            # uses Spanish translated NRCLex to get counts
+            transformed_data = self._Span_NRC_counts(self.lexpath, transformed_data)
+            transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=self.nrc_embeddings)
+
             # translates the cleaned text to English, runs normal NRCLex
             transformed_data = self._translator(transformed_data)
             transformed_data = self._NRC_counts(transformed_data)
-            transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=self.nrc_embeddings)
-
-            # uses Spanish translated NRCLex to get counts
-            transformed_data = self._Span_NRC_counts(self.lexpath, transformed_data)
-
+            
 
         # Get Universal Sentence embeddings
         self.get_universal_sent_embeddings(transformed_data, language=self.language)
