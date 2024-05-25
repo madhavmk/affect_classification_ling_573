@@ -16,8 +16,9 @@
             "slang_dict_path": "data/SlangSD.txt",
             "span_NRC_path": "data/lexico_nrc.csv",
             "load_translations": "load",
-            "trans_path": "data/translations.csv"
+            "trans_path": "data/translations.csv",
             "stop_words_path": "data/stopwords.txt",
+            "es_sent_path": "data/es_sent.txt",
             "nrc_embedding_file": "data/glove.twitter.27B.25d.txt"
         },
         "classification": {
