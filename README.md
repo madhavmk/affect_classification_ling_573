@@ -164,3 +164,8 @@ All arguments for the system are passed through the config file (`config.json`):
    - `"goldpath"`: argument specifying the path for where the ground truth data is stored for the evaluator model.
    - `"predpath"`: argument specifying the path for where the model's predicted classification data is stored for the evaluator model. 
 
+
+## (Optional) Running RoBERTa model
+Download our trained and finetuned RoBERTa model weights for English Task B from https://drive.google.com/file/d/1GG1wyZtNhC226WWb25DOcfjV_Y0wrvHc/view?usp=sharing
+
+Train using the jupyter notebook `src/training_roberta_model.ipynb`
