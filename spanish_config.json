@@ -6,7 +6,7 @@
             "devtest": "data/dev_es.tsv" ,
             "language": "spanish"
         },
-        "save_or_load": "load",
+        "save_or_load": "save",
         "processed_data_dir": "data/processed_data/D4/spanish"
   },
   "model": {

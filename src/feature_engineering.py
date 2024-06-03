@@ -885,15 +885,15 @@ class FeatureEngineering:
             transformed_data = self._Span_NRC_counts(lexpath, transformed_data)
             transformed_data = self._extended_NRC_counts(transformed_data, embedding_file=nrc_embedding_file)
 
-            if load_translations == 'load':
-                transformed_data = self._load_translations(trans_path, transformed_data)
-                transformed_data = self._NRC_counts(transformed_data)
-
-            else:
-                # translates the cleaned text to English, runs normal NRCLex
-                transformed_data = self._translator(transformed_data)
-                transformed_data.to_csv('data/translations.csv')
-                transformed_data = self._NRC_counts(transformed_data)
+            # if load_translations == 'load':
+            #     transformed_data = self._load_translations(trans_path, transformed_data)
+            #     transformed_data = self._NRC_counts(transformed_data)
+            #
+            # else:
+            #     # translates the cleaned text to English, runs normal NRCLex
+            #     transformed_data = self._translator(transformed_data)
+            #     transformed_data.to_csv('data/translations.csv')
+            #     transformed_data = self._NRC_counts(transformed_data)
 
 
         # Get Universal Sentence embeddings
